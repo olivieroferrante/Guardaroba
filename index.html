@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Guardaroba</title>
+<meta name="description" content="Inventario dei vestiti diviso per casa, armadio e cassetto.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Guardaroba">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#EEF1F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F141B" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one mobile column — place tabs, search, then items grouped like labelled drawers; a floating add button and bottom sheets for editing. */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --sunk:#E3E8EF; --ink:#17202C; --muted:#5B6878; --line:#D3DAE3;
+  --accent:#2D4F8A; --accent-ink:#FFFFFF; --label:#F4E7C5; --label-ink:#5A4512; --danger:#B3362F; --ok:#2F7A4C;
+  --p1:#3E64A8; --p2:#B7832A; --p3:#4F8463; --p4:#8A5A86;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Figtree", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:12px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#0F141B; --surface:#18202A; --sunk:#121820; --ink:#E6EBF1; --muted:#97A4B4; --line:#2A3441;
+  --accent:#8EAEE6; --accent-ink:#0E1520; --label:#3A3220; --label-ink:#EBD7A2; --danger:#F08A80; --ok:#7FCB9A;
+  --p1:#7FA2E0; --p2:#E0B260; --p3:#86BE98; --p4:#C496C0; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+body{font:15px/1.45 var(--f-body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{max-width:640px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-top:calc(16px + env(safe-area-inset-top, 0px));padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px))}
+
+.banner{background:var(--label);color:var(--label-ink);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+.banner button{background:none;border:none;color:inherit;font-weight:600;text-decoration:underline;padding:0}
+.note{background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted);margin-bottom:14px}
+
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+.top h1{font:800 34px/1 var(--f-display);letter-spacing:-.02em;margin:0}
+.stats{font:500 11.5px/1.3 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.sync{display:inline-flex;align-items:center;gap:6px;font:500 11px var(--f-mono);letter-spacing:.04em;color:var(--muted);margin-top:5px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.sync.ok i{background:var(--ok)} .sync.busy i{background:var(--p2)} .sync.bad i{background:var(--danger)} .sync.bad{color:var(--danger)}
+.topbtns{display:flex;gap:6px;flex:none}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+.round{width:36px;height:36px;padding:0;display:grid;place-items:center;color:var(--muted)}
+
+.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:12px}
+.tab{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 11px;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tab .tn{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab .tc{font:500 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.tab[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.p1{background:var(--p1)}.p2{background:var(--p2)}.p3{background:var(--p3)}.p4{background:var(--p4)}
+
+.search{position:relative;display:block;margin-bottom:10px}
+.search input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px 11px 38px;font-size:16px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 11px;font-size:13px;white-space:nowrap}
+.chip b{font:500 11px var(--f-mono);color:var(--muted);margin-left:4px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip[aria-pressed="true"] b{color:inherit;opacity:.7}
+
+.group{margin-bottom:18px}
+.ghead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.plate{display:inline-flex;align-items:center;gap:8px;background:var(--label);color:var(--label-ink);font:500 11.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;border-radius:4px;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--label-ink) 22%, transparent);min-width:0}
+.plate span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate em{font-style:normal;opacity:.7}
+.gtitle{font:600 17px var(--f-display);margin:0}
+.gtitle em{font:500 12px var(--f-mono);color:var(--muted);font-style:normal;margin-left:6px}
+.addhere{background:none;border:none;color:var(--accent);font-weight:600;font-size:13px;padding:6px 2px;flex:none}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.empty-row{padding:12px 14px;color:var(--muted);font-size:13px}
+.item{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-top:1px solid var(--line);padding:10px 12px;text-align:left}
+.item:first-child{border-top:none}
+.item:active{background:var(--sunk)}
+.thumb{width:44px;height:44px;border-radius:8px;flex:none;overflow:hidden;display:grid;place-items:center;font:600 16px var(--f-display);color:#fff;background:var(--sunk)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb.light{color:#333}
+.ib{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.iname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imeta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:var(--muted);align-items:center}
+.imeta .loc{display:inline-flex;align-items:center;gap:5px}
+.qty{font:500 12px var(--f-mono);color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.tag{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--ink)}
+
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right, 0px));bottom:calc(18px + env(safe-area-inset-bottom, 0px));background:var(--accent);color:var(--accent-ink);border:none;border-radius:999px;padding:14px 20px;font-weight:600;font-size:15px;box-shadow:0 6px 20px rgba(10,20,40,.25);display:flex;align-items:center;gap:8px;z-index:20}
+
+.state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:60px 10px;color:var(--muted)}
+.spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 18px;display:flex;flex-direction:column;gap:14px}
+.card h2{font:800 26px/1.1 var(--f-display);margin:0;text-wrap:balance}
+.card p{margin:0;color:var(--muted)}
+.err{color:var(--danger);font-size:14px}
+
+.scrim{position:fixed;inset:0;background:rgba(8,12,20,.45);z-index:30}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;background:var(--surface);border-radius:18px 18px 0 0;max-height:calc(100% - env(safe-area-inset-top, 0px) - 12px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:10px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px));box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+.sheet-in{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 4px}
+.sheet h2{font:800 22px var(--f-display);margin:0}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field>span{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 11px;font-size:16px}
+.field textarea{min-height:64px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden}
+.stepper button{background:none;border:none;width:36px;height:42px;font-size:18px;flex:none}
+.stepper input{border:none;background:transparent;text-align:center;padding:10px 0;width:100%;min-width:0;font-size:16px;font-variant-numeric:tabular-nums}
+.photo{display:flex;gap:12px;align-items:center}
+.photo .pv{width:76px;height:76px;border-radius:12px;background:var(--sunk);overflow:hidden;display:grid;place-items:center;flex:none;color:var(--muted);font-size:12px;text-align:center}
+.photo .pv img{width:100%;height:100%;object-fit:cover}
+.filebtn{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-weight:600;font-size:13px;cursor:pointer}
+.vh{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.linkbtn{background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline;padding:4px 0}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:12px;padding:12px 16px;font-weight:600;font-size:15px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);flex:1}
+.btn.plain{background:var(--sunk);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid color-mix(in srgb, var(--danger) 45%, transparent)}
+.btn.danger.armed{background:var(--danger);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+
+.box{border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
+.mrow{display:flex;gap:8px;align-items:center}
+.mrow input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:16px}
+.mrow .cnt{font:500 11px var(--f-mono);color:var(--muted);flex:none;width:52px;text-align:right}
+.iconbtn{background:none;border:1px solid var(--line);border-radius:9px;width:38px;height:38px;flex:none;display:grid;place-items:center;color:var(--muted)}
+.iconbtn:disabled{opacity:.35}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.mph{display:flex;align-items:center;gap:8px}
+.mph input{font-weight:600}
+.kv{font:500 12px var(--f-mono);color:var(--muted);word-break:break-all}
+
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;z-index:40;max-width:calc(100% - 32px)}
+@media (max-width:380px){.row3{grid-template-columns:1fr 1fr}.row3 .field:last-child{grid-column:1 / -1}}
+@media (prefers-reduced-motion: reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+<div id="app"><div id="main"></div></div>
+<div id="sheet"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+"use strict";
+/* ============ costanti ============ */
+const CATS=[["magliette","Magliette"],["camicie","Camicie"],["maglioni","Maglioni e felpe"],["pantaloni","Pantaloni"],["shorts","Pantaloncini"],["giacche","Giacche e cappotti"],["abiti","Abiti e completi"],["intimo","Intimo"],["calze","Calze"],["pigiami","Pigiami"],["sport","Sport"],["scarpe","Scarpe"],["accessori","Accessori"],["altro","Altro"]];
+const CAT=Object.fromEntries(CATS);
+const COLORS={nero:"#1f1f22",nera:"#1f1f22",bianco:"#f4f4f2",bianca:"#f4f4f2",grigio:"#8b9097",grigia:"#8b9097",antracite:"#3b3f45",blu:"#2b4a8b",navy:"#1d2a4a",azzurro:"#7fb0dc",azzurra:"#7fb0dc",celeste:"#a9cce8",rosso:"#b8322b",rossa:"#b8322b",bordeaux:"#6e1f2c",verde:"#3f7a4f",oliva:"#6b6b35",giallo:"#e1bd3a",gialla:"#e1bd3a",beige:"#d8c6a3",crema:"#efe5cc",marrone:"#6d4a32",cammello:"#b48a5a",rosa:"#e7a4b4",viola:"#6f4a8f",arancione:"#e07b32",jeans:"#45618f",denim:"#45618f"};
+const LIGHT=new Set(["#f4f4f2","#a9cce8","#e1bd3a","#d8c6a3","#efe5cc","#e7a4b4","#7fb0dc"]);
+const K={cfg:"gd-config",cache:"gd-cache",ops:"gd-ops",last:"gd-last"};
+const EMPTY=()=>({app:"guardaroba",version:1,places:[],containers:[],items:[]});
+
+/* ============ utility ============ */
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=s=>String(s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const newId=()=>((crypto.randomUUID&&crypto.randomUUID())||(Date.now().toString(36)+Math.random().toString(36).slice(2))).replace(/[^a-zA-Z0-9-]/g,"");
+const clone=o=>JSON.parse(JSON.stringify(o));
+const ls={get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast("Memoria del telefono piena: alcune modifiche potrebbero non restare in attesa.")}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+function b64enc(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
+function b64dec(b){const bin=atob(String(b).replace(/\s/g,""));const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes)}
+let toastT;
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},2800)}
+
+/* ============ archivio foto locale (IndexedDB) ============ */
+const idb=(()=>{let p;function open(){return p||(p=new Promise((res,rej)=>{const r=indexedDB.open("guardaroba",1);r.onupgradeneeded=()=>r.result.createObjectStore("photos");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
+  function tx(mode,fn){return open().then(db=>new Promise((res,rej)=>{const t=db.transaction("photos",mode);const req=fn(t.objectStore("photos"));t.oncomplete=()=>res(req&&req.result);t.onerror=()=>rej(t.error)}))}
+  return{get:k=>tx("readonly",s=>s.get(k)).catch(()=>undefined),set:(k,v)=>tx("readwrite",s=>s.put(v,k)),del:k=>tx("readwrite",s=>s.delete(k)).catch(()=>{})}})();
+const photoMem={};
+
+/* ============ stato ============ */
+let cfg=ls.get(K.cfg);          // {owner, repo, token}
+let cache=ls.get(K.cache);      // {data, sha} ultima versione letta da GitHub
+let ops=ls.get(K.ops)||[];      // modifiche locali non ancora salvate su GitHub
+const S={mode:"setup",W:null,items:[],view:"all",cat:null,q:"",note:"",sync:"idle",sheet:null,draft:null};
+const saveOps=()=>ls.set(K.ops,ops);
+
+/* ============ applicazione delle modifiche ============ */
+function applyOps(data,list){
+  const d=data||EMPTY();d.places=d.places||[];d.containers=d.containers||[];d.items=d.items||[];
+  const up=(arr,o)=>{const i=arr.findIndex(x=>x.id===o.id);if(i>=0)arr[i]=o;else arr.push(o)};
+  for(const op of list){
+    if(op.k==="item")up(d.items,op.item);
+    else if(op.k==="delItem")d.items=d.items.filter(x=>x.id!==op.id);
+    else if(op.k==="place")up(d.places,op.place);
+    else if(op.k==="delPlace")d.places=d.places.filter(x=>x.id!==op.id);
+    else if(op.k==="cont")up(d.containers,op.cont);
+    else if(op.k==="delCont")d.containers=d.containers.filter(x=>x.id!==op.id);
+  }
+  return d;
+}
+const dataOps=()=>ops.filter(o=>o.k!=="file"&&o.k!=="delFile");
+function recompute(){
+  if(!cfg||S.editingCfg){S.mode="setup";renderMain();return}
+  if(!cache){S.mode="loading";renderMain();return}
+  const v=applyOps(clone(cache.data||EMPTY()),dataOps());
+  S.W={places:v.places,containers:v.containers};S.items=v.items;
+  S.mode=v.places.length?"live":"onboard";
+  renderMain();
+}
+function commit(newOps){ops.push(...newOps);saveOps();recompute();scheduleSync(1200)}
+
+/* ============ GitHub ============ */
+class GhError extends Error{constructor(status,msg){super(msg||("HTTP "+status));this.status=status}}
+async function gh(path,opts={}){
+  const headers={Accept:"application/vnd.github+json",Authorization:"Bearer "+cfg.token,"X-GitHub-Api-Version":"2022-11-28",...(opts.headers||{})};
+  if(opts.body)headers["Content-Type"]="application/json";
+  let r;
+  try{r=await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/${path}`,{method:opts.method||"GET",body:opts.body,headers,cache:"no-store"})}
+  catch(e){throw new GhError(0,"offline")}
+  if(r.status===401)throw new GhError(401);
+  return r;
+}
+async function fetchRemote(){
+  const r=await gh("contents/data.json");
+  if(r.status===404)return{data:null,sha:null};
+  if(!r.ok)throw new GhError(r.status);
+  const j=await r.json();
+  if(j.encoding==="base64"&&j.content)return{data:JSON.parse(b64dec(j.content)),sha:j.sha};
+  const rr=await gh("contents/data.json",{headers:{Accept:"application/vnd.github.raw+json"}});
+  if(!rr.ok)throw new GhError(rr.status);
+  return{data:JSON.parse(await rr.text()),sha:j.sha};
+}
+async function shaOf(path){const r=await gh("contents/"+path);if(r.status===404)return null;if(!r.ok)throw new GhError(r.status);return(await r.json()).sha}
+async function flushFileOps(){
+  for(const op of ops.filter(o=>o.k==="file"||o.k==="delFile")){
+    if(op.k==="file"){
+      const dataUrl=photoMem[op.path]||await idb.get(op.path);
+      if(dataUrl){
+        const body={message:"Foto: "+(op.label||op.path),content:dataUrl.split(",")[1]};
+        let r=await gh("contents/"+op.path,{method:"PUT",body:JSON.stringify(body)});
+        if(r.status===422){const sha=await shaOf(op.path);if(sha)r=await gh("contents/"+op.path,{method:"PUT",body:JSON.stringify({...body,sha})})}
+        if(!r.ok)throw new GhError(r.status);
+      }
+    }else{
+      const sha=await shaOf(op.path);
+      if(sha){const r=await gh("contents/"+op.path,{method:"DELETE",body:JSON.stringify({message:"Rimossa foto: "+(op.label||op.path),sha})});if(!r.ok&&r.status!==404)throw new GhError(r.status)}
+    }
+    ops=ops.filter(o=>o!==op);saveOps();
+  }
+}
+function commitMessage(list){
+  if(list.length===1){const o=list[0];
+    if(o.k==="item")return(o.isNew?"Aggiunto: ":"Aggiornato: ")+o.item.name;
+    if(o.k==="delItem")return"Eliminato: "+(o.label||o.id);
+    if(o.k==="place")return"Posto: "+o.place.name;
+    if(o.k==="cont")return"Contenitore: "+o.cont.name;
+    if(o.k==="delPlace"||o.k==="delCont")return"Eliminato: "+(o.label||o.id);
+  }
+  return list.length+" modifiche al guardaroba";
+}
+let syncing=false,syncAgain=false,syncTimer=null;
+function scheduleSync(ms){clearTimeout(syncTimer);syncTimer=setTimeout(sync,ms==null?0:ms)}
+function setSync(s){S.sync=s;const els=document.querySelectorAll(".syncline");els.forEach(el=>{el.outerHTML=syncHtml()});if(!els.length&&S.mode==="loading")renderMain()}
+async function sync(){
+  if(!cfg)return;
+  if(syncing){syncAgain=true;return}
+  syncing=true;setSync("busy");
+  try{
+    if(!navigator.onLine)throw new GhError(0,"offline");
+    await flushFileOps();
+    let done=false;
+    for(let attempt=0;attempt<4&&!done;attempt++){
+      const remote=await fetchRemote();
+      const pending=dataOps();
+      if(!pending.length){cache={data:remote.data,sha:remote.sha};ls.set(K.cache,cache);done=true;break}
+      const next=applyOps(clone(remote.data||EMPTY()),pending);
+      next.app="guardaroba";next.version=1;next.updatedAt=new Date().toISOString();
+      const body={message:commitMessage(pending),content:b64enc(JSON.stringify(next,null,1))};
+      if(remote.sha)body.sha=remote.sha;
+      const r=await gh("contents/data.json",{method:"PUT",body:JSON.stringify(body)});
+      if(r.status===409||(r.status===422&&attempt<3))continue;
+      if(!r.ok)throw new GhError(r.status);
+      const j=await r.json();
+      ops=ops.filter(o=>!pending.includes(o));saveOps();
+      cache={data:next,sha:j.content.sha};ls.set(K.cache,cache);done=true;
+    }
+    if(!done)throw new GhError(409,"conflitto");
+    S.note="";setSync(ops.length?"busy":"ok");recompute();
+    hydratePhotos();
+  }catch(e){
+    const st=e.status;
+    if(st===401)setSync("auth");
+    else if(st===403)setSync("forbidden");
+    else if(st===404)setSync("notfound");
+    else if(st===0)setSync("offline");
+    else setSync("error");
+    if(!cache&&st===0){S.note="Sei offline: collegati a internet per scaricare il guardaroba la prima volta.";renderMain()}
+  }
+  syncing=false;
+  if(syncAgain){syncAgain=false;scheduleSync(300)}
+}
+function syncHtml(){
+  const n=ops.length;
+  const map={idle:["","—"],busy:["busy","Salvataggio su GitHub…"],ok:["ok","Sincronizzato con GitHub"],offline:["bad",`Offline · ${n} modific${n===1?"a":"he"} in attesa`],auth:["bad","Token non valido o scaduto: aggiornalo"],forbidden:["bad","Il token non può scrivere nel repository"],notfound:["bad","Repository non trovato: controlla le impostazioni"],error:["bad","Errore di GitHub: riprovo più tardi"]};
+  let[cls,txt]=map[S.sync]||map.idle;
+  if(S.sync==="ok"&&n)txt=`${n} modific${n===1?"a":"he"} in attesa`;
+  return`<button class="sync syncline ${cls}" data-act="${cls==="bad"?"settings":"syncnow"}" style="background:none;border:none;padding:0"><i></i>${esc(txt)}</button>`;
+}
+
+/* ============ foto ============ */
+const loading=new Set();
+async function loadPhoto(path){
+  if(photoMem[path]||loading.has(path))return;
+  loading.add(path);
+  try{
+    let url=await idb.get(path);
+    if(!url&&cfg&&navigator.onLine){
+      const r=await gh("contents/"+path);
+      if(r.ok){const j=await r.json();if(j.content){url="data:image/jpeg;base64,"+j.content.replace(/\s/g,"");idb.set(path,url).catch(()=>{})}}
+    }
+    if(url){photoMem[path]=url;document.querySelectorAll(`img[data-photo="${CSS.escape(path)}"]`).forEach(img=>{img.src=url;img.hidden=false})}
+  }catch(e){}
+  loading.delete(path);
+}
+function hydratePhotos(){
+  const paths=[...new Set([...document.querySelectorAll("img[data-photo]")].map(i=>i.dataset.photo))].filter(p=>!photoMem[p]);
+  let i=0;const worker=async()=>{while(i<paths.length)await loadPhoto(paths[i++])};
+  for(let k=0;k<3;k++)worker();
+}
+function shrink(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{const s=Math.min(1,360/Math.max(img.width,img.height));const w=Math.round(img.width*s),h=Math.round(img.height*s);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);URL.revokeObjectURL(url);res(c.toDataURL("image/jpeg",.74))};img.onerror=()=>{URL.revokeObjectURL(url);rej()};img.src=url})}
+
+/* ============ helper vista ============ */
+const placeById=()=>Object.fromEntries((S.W?.places||[]).map(p=>[p.id,p]));
+const contById=()=>Object.fromEntries((S.W?.containers||[]).map(c=>[c.id,c]));
+const placeOf=(it,C)=>C[it.containerId]?.placeId;
+const qtyOf=it=>Math.max(1,Number(it.qty)||1);
+const sumQty=arr=>arr.reduce((a,it)=>a+qtyOf(it),0);
+function swatch(it){
+  if(it.photo){const src=photoMem[it.photo];return`<span class="thumb"><img data-photo="${esc(it.photo)}" ${src?`src="${src}"`:"hidden"} alt=""></span>`}
+  const key=norm(it.color).split(/[\s,/]+/).find(w=>COLORS[w]);const col=key?COLORS[key]:null;
+  const ini=esc((it.name||"?").trim().charAt(0).toUpperCase());
+  if(!col)return`<span class="thumb" style="color:var(--muted)">${ini}</span>`;
+  return`<span class="thumb${LIGHT.has(col)?" light":""}" style="background:${col}">${ini}</span>`;
+}
+function itemRow(it,P,C,showWhere){
+  const c=C[it.containerId],p=c&&P[c.placeId];const meta=[];
+  if(showWhere)meta.push(p?`<span class="loc"><i class="dot ${esc(p.color)}"></i>${esc(p.name)} · ${esc(c.name)}</span>`:`<span class="loc">Senza posto</span>`);
+  else meta.push(esc(CAT[it.category]||"Altro"));
+  if(it.size)meta.push(`<span class="tag">${esc(it.size)}</span>`);
+  if(it.color&&!showWhere)meta.push(esc(it.color));
+  return`<button class="item" data-act="edit" data-id="${esc(it.id)}">${swatch(it)}<span class="ib"><span class="iname">${esc(it.name)}</span><span class="imeta">${meta.join("")}</span></span>${qtyOf(it)>1?`<span class="qty">×${qtyOf(it)}</span>`:""}</button>`;
+}
+function matches(it,P,C){
+  if(!S.q)return true;const c=C[it.containerId],p=c&&P[c.placeId];
+  const hay=norm([it.name,it.color,it.size,it.notes,CAT[it.category],c&&c.name,p&&p.name].join(" "));
+  return norm(S.q).split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
+}
+
+/* ============ schermate ============ */
+const $main=document.getElementById("main"),$sheet=document.getElementById("sheet");
+function renderMain(){
+  const note=S.note?`<div class="note">${esc(S.note)}</div>`:"";
+  if(S.mode==="setup"){renderSetup();return}
+  if(S.mode==="loading"){$main.innerHTML=`${note}<div class="state"><div class="spinner" aria-hidden="true"></div><p>Scarico il guardaroba da GitHub…</p>${["auth","forbidden","notfound","error"].includes(S.sync)?`<p class="err">${S.sync==="auth"?"Il token non è valido o è scaduto.":S.sync==="notfound"?"Repository non trovato o token senza accesso.":S.sync==="forbidden"?"Il token non ha i permessi giusti.":"GitHub ha dato un errore."}</p><button class="ghost" data-act="settings">Controlla le impostazioni</button>`:""}</div>`;return}
+  if(S.mode==="onboard"){renderOnboard(note);return}
+  const P=placeById(),C=contById(),W=S.W,all=S.items;
+  if(S.view!=="all"&&!P[S.view])S.view="all";
+  const scope=all.filter(it=>S.q||S.view==="all"||placeOf(it,C)===S.view);
+  const shown=scope.filter(it=>(!S.cat||it.category===S.cat)&&matches(it,P,C));
+  let h=note;
+  h+=`<div class="top"><div><h1>Guardaroba</h1><div class="stats">${sumQty(all)} capi · ${W.places.length} posti · ${W.containers.length} contenitori</div>${syncHtml()}</div><div class="topbtns"><button class="ghost" data-act="manage">Posti e cassetti</button><button class="ghost round" data-act="settings" aria-label="Impostazioni"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.8v2.4M10 15.8v2.4M18.2 10h-2.4M4.2 10H1.8M15.8 4.2l-1.7 1.7M5.9 14.1l-1.7 1.7M15.8 15.8l-1.7-1.7M5.9 5.9 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div></div>`;
+  h+=`<div class="tabs" role="group" aria-label="Filtra per posto"><button class="tab" data-act="view" data-v="all" aria-pressed="${S.view==="all"}"><span class="tn">Tutto</span><span class="tc">${sumQty(all)} capi</span></button>`;
+  for(const p of W.places){const n=sumQty(all.filter(it=>placeOf(it,C)===p.id));h+=`<button class="tab" data-act="view" data-v="${esc(p.id)}" aria-pressed="${S.view===p.id}"><span class="tn"><i class="dot ${esc(p.color)}"></i>${esc(p.name)}</span><span class="tc">${n} capi</span></button>`}
+  h+=`</div>`;
+  h+=`<label class="search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Cerca: felpa, nero, cassetto…" value="${esc(S.q)}" autocomplete="off" aria-label="Cerca"></label>`;
+  const counts={};for(const it of scope.filter(it=>matches(it,P,C)))counts[it.category]=(counts[it.category]||0)+qtyOf(it);
+  h+=`<div class="chips" role="group" aria-label="Categoria"><button class="chip" data-act="cat" data-c="" aria-pressed="${!S.cat}">Tutte</button>`;
+  for(const[k,l]of CATS)if(counts[k]||S.cat===k)h+=`<button class="chip" data-act="cat" data-c="${k}" aria-pressed="${S.cat===k}">${l}<b>${counts[k]||0}</b></button>`;
+  h+=`</div>`;
+  if(S.view!=="all"&&!S.q){
+    const conts=W.containers.filter(c=>c.placeId===S.view);
+    if(!conts.length)h+=`<div class="state"><p>Nessun contenitore in ${esc(P[S.view].name)}.</p><button class="ghost" data-act="manage">Aggiungi un armadio o un cassetto</button></div>`;
+    for(const c of conts){
+      const its=shown.filter(it=>it.containerId===c.id);if(S.cat&&!its.length)continue;
+      its.sort((a,b)=>(a.name||"").localeCompare(b.name||"","it"));
+      h+=`<section class="group"><div class="ghead"><span class="plate"><span>${esc(c.name)}</span><em>${sumQty(its)}</em></span><button class="addhere" data-act="add" data-c="${esc(c.id)}">+ Aggiungi qui</button></div><div class="list">${its.length?its.map(it=>itemRow(it,P,C,false)).join(""):`<div class="empty-row">Vuoto</div>`}</div></section>`;
+    }
+  }else{
+    if(!shown.length)h+=all.length?`<div class="state"><p>Nessun capo trovato${S.q?` per “${esc(S.q)}”`:""}.</p></div>`:`<div class="state"><p>Ancora niente qui. Inizia dal cassetto che hai davanti: tocca <b>Aggiungi capo</b>.<br>Hai un backup della vecchia app? Importalo dalle impostazioni.</p></div>`;
+    const byCat={};for(const it of shown)(byCat[it.category]||(byCat[it.category]=[])).push(it);
+    for(const[k,l]of CATS){const its=byCat[k];if(!its)continue;its.sort((a,b)=>(a.name||"").localeCompare(b.name||"","it"));
+      h+=`<section class="group"><div class="ghead"><h2 class="gtitle">${l}<em>${sumQty(its)}</em></h2></div><div class="list">${its.map(it=>itemRow(it,P,C,true)).join("")}</div></section>`}
+  }
+  h+=`<button class="fab" data-act="add"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Aggiungi capo</button>`;
+  const ae=document.activeElement,hadFocus=ae&&ae.id==="q",pos=hadFocus?ae.selectionStart:0;
+  $main.innerHTML=h;
+  if(hadFocus){const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(e){}}
+  hydratePhotos();
+}
+
+function renderSetup(){
+  const guess=(location.hostname.endsWith(".github.io")?location.hostname.split(".")[0]:"");
+  const standalone=navigator.standalone||matchMedia("(display-mode: standalone)").matches;
+  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  $main.innerHTML=`<div class="top"><div><h1>Guardaroba</h1><div class="stats">Collegamento a GitHub</div></div></div>
+  ${isIOS&&!standalone?`<div class="banner">Prima aggiungi l'app alla Home: tocca <b>Condividi</b> → <b>Aggiungi alla schermata Home</b>, poi aprila da lì e collega GitHub. L'app dalla Home ha una memoria separata da Safari.</div>`:""}
+  <form class="card" id="setupForm">
+    <h2>Dove salvo i tuoi vestiti?</h2>
+    <p>I dati vanno nel tuo repository privato su GitHub. Il token resta solo su questo dispositivo.</p>
+    <label class="field"><span>Username GitHub</span><input id="sOwner" required autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(cfg?.owner||guess)}"></label>
+    <label class="field"><span>Repository dei dati</span><input id="sRepo" required autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(cfg?.repo||"guardaroba-dati")}"></label>
+    <label class="field"><span>Token (github_pat_…)</span><input id="sToken" required type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" value="${esc(cfg?.token||"")}"></label>
+    <p class="err" id="sErr" hidden></p>
+    <button class="btn primary" type="submit" id="sBtn">Collega</button>
+    ${cfg?`<button class="btn plain" type="button" data-act="canceledit">Annulla</button>`:""}
+  </form>`;
+}
+
+function renderOnboard(note){
+  $main.innerHTML=`${note}<div class="top"><div><h1>Guardaroba</h1><div class="stats">Primo avvio</div>${syncHtml()}</div><div class="topbtns"><button class="ghost round" data-act="settings" aria-label="Impostazioni">⚙</button></div></div>
+  <form class="card" id="onbForm">
+    <h2>Dove tieni i tuoi vestiti?</h2>
+    <p>Dai un nome ai due posti tra cui ti dividi. Se hai un backup della vecchia app, importalo invece dalle impostazioni.</p>
+    <label class="field"><span>Casa principale</span><input id="onbA" value="Casa" required maxlength="40"></label>
+    <label class="field"><span>Dove vivi durante il mese</span><input id="onbB" value="Fuori sede" required maxlength="40"></label>
+    <label class="check"><input type="checkbox" id="onbV" checked><span>Aggiungi anche <b>Valigia</b>, per quello che porti avanti e indietro</span></label>
+    <label class="check"><input type="checkbox" id="onbC" checked><span>Crea un <b>Armadio</b> e una <b>Cassettiera</b> in ogni casa</span></label>
+    <button class="btn primary" type="submit">Crea il guardaroba</button>
+    <button class="btn plain" type="button" data-act="settings">Importa un backup</button>
+  </form>`;
+}
+
+/* ============ fogli ============ */
+function openSheet(kind,data){S.sheet=kind;S.draft=data||null;document.body.style.overflow="hidden";renderSheet()}
+function closeSheet(){S.sheet=null;S.draft=null;document.body.style.overflow="";$sheet.innerHTML=""}
+function locOptions(sel){let o="";for(const p of S.W.places){const cs=S.W.containers.filter(c=>c.placeId===p.id);if(!cs.length)continue;o+=`<optgroup label="${esc(p.name)}">`+cs.map(c=>`<option value="${esc(c.id)}"${c.id===sel?" selected":""}>${esc(c.name)}</option>`).join("")+`</optgroup>`}return o}
+
+function renderSheet(){
+  if(!S.sheet){$sheet.innerHTML="";return}
+  let body="";
+  if(S.sheet==="item"){
+    const d=S.draft,isNew=!S.items.some(x=>x.id===d.id),hasConts=S.W.containers.length>0;
+    const src=d.photoData||(d.photo&&photoMem[d.photo]);
+    body=`<h2>${isNew?"Nuovo capo":"Modifica capo"}</h2>
+    <form id="itemForm" class="sheet-in" style="gap:12px">
+      <div class="photo"><div class="pv">${src?`<img src="${src}" alt="Foto del capo">`:(d.photo?"Foto…":"Nessuna foto")}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start"><label class="filebtn" for="fPhoto">${(d.photo||d.photoData)?"Cambia foto":"Scatta o scegli foto"}</label><input class="vh" id="fPhoto" type="file" accept="image/*">${(d.photo||d.photoData)?`<button type="button" class="linkbtn" data-act="nophoto">Rimuovi foto</button>`:""}</div></div>
+      <label class="field"><span>Nome</span><input id="fName" required maxlength="80" placeholder="Es. Felpa grigia con cappuccio" value="${esc(d.name)}"></label>
+      <div class="row">
+        <label class="field"><span>Categoria</span><select id="fCat">${CATS.map(([k,l])=>`<option value="${k}"${d.category===k?" selected":""}>${l}</option>`).join("")}</select></label>
+        <label class="field"><span>Dove si trova</span><select id="fLoc" required>${hasConts?locOptions(d.containerId):`<option value="">Crea prima un contenitore</option>`}</select></label>
+      </div>
+      <div class="row3">
+        <label class="field"><span>Colore</span><input id="fColor" maxlength="30" placeholder="Es. nero" value="${esc(d.color)}"></label>
+        <label class="field"><span>Taglia</span><input id="fSize" maxlength="12" placeholder="M, 42…" value="${esc(d.size)}"></label>
+        <div class="field"><span>Quantità</span><div class="stepper"><button type="button" data-act="qty" data-d="-1" aria-label="Meno">−</button><input id="fQty" type="number" inputmode="numeric" min="1" max="99" value="${qtyOf(d)}" aria-label="Quantità"><button type="button" data-act="qty" data-d="1" aria-label="Più">+</button></div></div>
+      </div>
+      <label class="field"><span>Note</span><textarea id="fNotes" maxlength="300" placeholder="Es. da portare a casa, da riparare…">${esc(d.notes)}</textarea></label>
+      <div class="actions"><button class="btn plain" type="button" data-act="close">Annulla</button><button class="btn primary" type="submit"${hasConts?"":" disabled"}>${isNew?"Aggiungi":"Salva"}</button></div>
+      ${isNew?"":`<button class="btn danger" type="button" data-act="delitem">Elimina capo</button>`}
+    </form>`;
+  }else if(S.sheet==="manage"){
+    const cnt=S.items.reduce((m,it)=>(m[it.containerId]=(m[it.containerId]||0)+qtyOf(it),m),{});
+    body=`<h2>Posti e cassetti</h2><p class="hint">I nomi si salvano appena esci dal campo. Un contenitore si può eliminare solo quando è vuoto.</p>`;
+    for(const p of S.W.places){
+      const cs=S.W.containers.filter(c=>c.placeId===p.id);
+      body+=`<div class="box"><div class="mph"><i class="dot ${esc(p.color)}"></i><div class="mrow" style="flex:1"><input data-ren="place" data-id="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nome del posto" maxlength="40"><button class="iconbtn" data-act="delplace" data-id="${esc(p.id)}" ${cs.length?"disabled":""} aria-label="Elimina posto">✕</button></div></div>`;
+      for(const c of cs)body+=`<div class="mrow"><input data-ren="cont" data-id="${esc(c.id)}" value="${esc(c.name)}" aria-label="Nome del contenitore" maxlength="50"><span class="cnt">${cnt[c.id]||0} capi</span><button class="iconbtn" data-act="delcont" data-id="${esc(c.id)}" ${cnt[c.id]?"disabled":""} aria-label="Elimina contenitore">✕</button></div>`;
+      body+=`<form class="mrow" data-addcont="${esc(p.id)}"><input placeholder="Nuovo armadio, cassetto, scatola…" maxlength="50" aria-label="Nuovo contenitore in ${esc(p.name)}"><button class="iconbtn" type="submit" aria-label="Aggiungi contenitore" style="color:var(--accent)">+</button></form></div>`;
+    }
+    body+=`<form class="mrow" id="addPlace"><input id="newPlace" placeholder="Aggiungi un altro posto" maxlength="40" aria-label="Nuovo posto"><button class="iconbtn" type="submit" aria-label="Aggiungi posto" style="color:var(--accent)">+</button></form>
+    <button class="btn plain" data-act="close">Fatto</button>`;
+  }else if(S.sheet==="settings"){
+    body=`<h2>Impostazioni</h2>
+    <div class="box"><b>GitHub</b><span class="kv">${esc(cfg.owner)}/${esc(cfg.repo)}</span>${syncHtml()}<div class="actions"><button class="btn plain" data-act="syncnow" style="flex:1">Sincronizza ora</button><button class="btn plain" data-act="editcfg" style="flex:1">Cambia token o repo</button></div></div>
+    <div class="box"><b>Importa backup</b><p class="hint">Dal file esportato dalla vecchia app (o da questa). I capi con lo stesso codice vengono aggiornati, gli altri aggiunti.</p>
+      <label class="filebtn" for="impFile" style="align-self:flex-start">Scegli file .json</label><input class="vh" id="impFile" type="file" accept=".json,application/json,text/plain">
+      <label class="field"><span>Oppure incolla qui il testo</span><textarea id="impText" placeholder='{"app":"guardaroba", …}'></textarea></label>
+      <button class="btn plain" data-act="importtext">Importa testo incollato</button>
+      <p class="hint" id="impMsg" hidden></p></div>
+    <div class="box"><b>Esporta backup</b><p class="hint">Un file con tutto, foto comprese. Su GitHub hai già la cronologia completa, questo è un extra.</p><button class="btn plain" data-act="export">Esporta backup</button></div>
+    <button class="btn danger" data-act="logout">Scollega da questo dispositivo</button>
+    <button class="btn plain" data-act="close">Chiudi</button>`;
+  }
+  $sheet.innerHTML=`<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in"><div class="grab"></div>${body}</div></div>`;
+}
+
+function readForm(){const g=id=>document.getElementById(id);return{...S.draft,name:g("fName").value.trim(),category:g("fCat").value,containerId:g("fLoc").value,color:g("fColor").value.trim(),size:g("fSize").value.trim(),qty:Math.min(99,Math.max(1,parseInt(g("fQty").value,10)||1)),notes:g("fNotes").value.trim()}}
+
+/* ============ import / export ============ */
+async function importBackup(text){
+  let data;try{data=JSON.parse(text)}catch(e){throw new Error("Il testo non è un backup valido (JSON non leggibile).")}
+  if(!data||!Array.isArray(data.places)||!Array.isArray(data.containers)||!Array.isArray(data.items))throw new Error("Questo file non sembra un backup del Guardaroba.");
+  const newOps=[];const ts=Date.now();let photos=0;
+  for(const p of data.places)newOps.push({k:"place",place:{id:String(p.id),name:String(p.name||"Posto"),color:["p1","p2","p3","p4"].includes(p.color)?p.color:"p4"}});
+  for(const c of data.containers)newOps.push({k:"cont",cont:{id:String(c.id),name:String(c.name||"Contenitore"),placeId:String(c.placeId)}});
+  for(const raw of data.items){
+    const it={id:String(raw.id||newId()),name:String(raw.name||"Senza nome"),category:CAT[raw.category]?raw.category:"altro",containerId:String(raw.containerId||""),color:raw.color||"",size:raw.size||"",qty:qtyOf(raw),notes:raw.notes||"",photo:""};
+    if(typeof raw.photo==="string"&&raw.photo.startsWith("data:image")){
+      const path=`photos/${it.id.replace(/[^a-zA-Z0-9-]/g,"")}-${ts}.jpg`;
+      await idb.set(path,raw.photo);photoMem[path]=raw.photo;
+      newOps.push({k:"file",path,label:it.name});it.photo=path;photos++;
+    }else if(typeof raw.photo==="string"&&raw.photo.startsWith("photos/"))it.photo=raw.photo;
+    newOps.push({k:"item",item:it,isNew:true});
+  }
+  if(!cache)cache={data:null,sha:null};
+  commit(newOps);
+  return`Importati ${data.items.length} capi, ${data.places.length} posti e ${data.containers.length} contenitori${photos?` (${photos} foto)`:""}. Il caricamento su GitHub prosegue in sottofondo.`;
+}
+async function exportBackup(){
+  const items=[];
+  for(const it of S.items){const o={...it};delete o.updatedAt;if(o.photo){o.photo=photoMem[o.photo]||await idb.get(o.photo)||o.photo}items.push(o)}
+  const json=JSON.stringify({app:"guardaroba",version:1,exportedAt:new Date().toISOString(),places:S.W.places,containers:S.W.containers,items},null,1);
+  const name="guardaroba-backup-"+new Date().toISOString().slice(0,10)+".json";
+  const file=new File([json],name,{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});return}catch(e){if(e&&e.name==="AbortError")return}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+}
+
+/* ============ eventi ============ */
+let armT=null;
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-act]");if(!t)return;const a=t.dataset.act;
+  if(a==="view"){S.view=t.dataset.v;S.cat=null;renderMain();window.scrollTo({top:0})}
+  else if(a==="cat"){S.cat=t.dataset.c||null;renderMain()}
+  else if(a==="manage")openSheet("manage");
+  else if(a==="settings"){if(!cfg){closeSheet();return}openSheet("settings")}
+  else if(a==="close")closeSheet();
+  else if(a==="syncnow"){scheduleSync(0)}
+  else if(a==="editcfg"){closeSheet();S.editingCfg=true;recompute()}
+  else if(a==="canceledit"){S.editingCfg=false;recompute()}
+  else if(a==="logout"){
+    if(!t.classList.contains("armed")){t.classList.add("armed");t.textContent=ops.length?`Hai ${ops.length} modifiche non salvate: tocca di nuovo per scollegare`:"Tocca di nuovo per scollegare";clearTimeout(armT);armT=setTimeout(()=>{t.classList.remove("armed");t.textContent="Scollega da questo dispositivo"},5000);return}
+    ls.del(K.cfg);ls.del(K.cache);ls.del(K.ops);cfg=null;cache=null;ops=[];closeSheet();recompute();
+  }
+  else if(a==="export"){try{await exportBackup()}catch(err){toast("Esportazione non riuscita.")}}
+  else if(a==="importtext"){
+    const txt=document.getElementById("impText").value.trim();const msg=document.getElementById("impMsg");
+    if(!txt){msg.hidden=false;msg.textContent="Incolla prima il testo del backup.";return}
+    try{msg.hidden=false;msg.textContent=await importBackup(txt);document.getElementById("impText").value=""}catch(err){msg.hidden=false;msg.textContent=err.message}
+  }
+  else if(a==="add"){
+    if(!S.W||!S.W.containers.length){openSheet("manage");toast("Crea prima un armadio o un cassetto.");return}
+    const C=contById();let cid=t.dataset.c;
+    if(!cid){const last=ls.get(K.last);const inView=S.W.containers.filter(c=>S.view==="all"||c.placeId===S.view);cid=(last&&C[last]&&(S.view==="all"||C[last].placeId===S.view))?last:(inView[0]||S.W.containers[0]).id}
+    openSheet("item",{id:newId(),name:"",category:S.cat||"magliette",containerId:cid,color:"",size:"",qty:1,notes:"",photo:""});
+  }
+  else if(a==="edit"){const it=S.items.find(x=>x.id===t.dataset.id);if(it)openSheet("item",clone(it))}
+  else if(a==="qty"){const q=document.getElementById("fQty");q.value=Math.min(99,Math.max(1,(parseInt(q.value,10)||1)+Number(t.dataset.d)))}
+  else if(a==="nophoto"){Object.assign(S.draft,readForm(),{photoData:null,photoRemoved:true,photo:""});renderSheet()}
+  else if(a==="delitem"){
+    if(!t.classList.contains("armed")){t.classList.add("armed");t.textContent="Tocca di nuovo per eliminare";clearTimeout(armT);armT=setTimeout(()=>{t.classList.remove("armed");t.textContent="Elimina capo"},4000);return}
+    const orig=S.items.find(x=>x.id===S.draft.id);const name=S.draft.name;closeSheet();if(!orig)return;
+    const list=[{k:"delItem",id:orig.id,label:orig.name}];if(orig.photo)list.push({k:"delFile",path:orig.photo,label:orig.name});
+    commit(list);toast("Eliminato: "+name);
+  }
+  else if(a==="delcont"){const c=S.W.containers.find(x=>x.id===t.dataset.id);commit([{k:"delCont",id:c.id,label:c.name}]);renderSheet()}
+  else if(a==="delplace"){const p=S.W.places.find(x=>x.id===t.dataset.id);commit([{k:"delPlace",id:p.id,label:p.name}]);renderSheet()}
+});
+document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;renderMain()}});
+document.addEventListener("change",async e=>{
+  const t=e.target;
+  if(t.id==="fPhoto"&&t.files&&t.files[0]){try{const url=await shrink(t.files[0]);Object.assign(S.draft,readForm(),{photoData:url});renderSheet()}catch(err){toast("Non riesco a leggere questa immagine. Prova con un'altra foto.")}}
+  else if(t.id==="impFile"&&t.files&&t.files[0]){const msg=document.getElementById("impMsg");msg.hidden=false;msg.textContent="Importo…";try{msg.textContent=await importBackup(await t.files[0].text())}catch(err){msg.textContent=err.message}t.value=""}
+  else if(t.dataset.ren){
+    const v=t.value.trim();if(!v){renderSheet();return}
+    if(t.dataset.ren==="place"){const p=S.W.places.find(x=>x.id===t.dataset.id);if(p&&p.name!==v)commit([{k:"place",place:{...p,name:v}}])}
+    else{const c=S.W.containers.find(x=>x.id===t.dataset.id);if(c&&c.name!==v)commit([{k:"cont",cont:{...c,name:v}}])}
+  }
+});
+document.addEventListener("submit",async e=>{
+  const f=e.target;e.preventDefault();
+  if(f.id==="setupForm"){
+    const owner=document.getElementById("sOwner").value.trim(),repo=document.getElementById("sRepo").value.trim(),token=document.getElementById("sToken").value.trim();
+    const err=document.getElementById("sErr"),btn=document.getElementById("sBtn");
+    btn.disabled=true;btn.textContent="Controllo…";err.hidden=true;
+    let msg=null;
+    try{const r=await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+token},cache:"no-store"});
+      if(r.status===401)msg="Token non valido: controlla di averlo copiato per intero.";
+      else if(r.status===404)msg=`Non trovo ${owner}/${repo}. Controlla i nomi e che il token abbia accesso proprio a questo repository.`;
+      else if(!r.ok)msg="GitHub ha risposto con un errore ("+r.status+"). Riprova tra poco.";
+    }catch(x){msg="Nessuna connessione: collegati a internet e riprova."}
+    if(msg){err.textContent=msg;err.hidden=false;btn.disabled=false;btn.textContent="Collega";return}
+    const changed=!cfg||cfg.owner!==owner||cfg.repo!==repo;
+    cfg={owner,repo,token};ls.set(K.cfg,cfg);S.editingCfg=false;
+    if(changed){cache=null;ls.del(K.cache)}
+    S.sync="idle";recompute();scheduleSync(0);
+  }
+  else if(f.id==="onbForm"){
+    const a=document.getElementById("onbA").value.trim()||"Casa",b=document.getElementById("onbB").value.trim()||"Fuori sede";
+    const P=[{id:newId(),name:a,color:"p1"},{id:newId(),name:b,color:"p2"}];
+    if(document.getElementById("onbV").checked)P.push({id:newId(),name:"Valigia",color:"p3"});
+    const list=P.map(p=>({k:"place",place:p}));
+    if(document.getElementById("onbC").checked)for(const p of P.slice(0,2))list.push({k:"cont",cont:{id:newId(),name:"Armadio",placeId:p.id}},{k:"cont",cont:{id:newId(),name:"Cassettiera",placeId:p.id}});
+    if(P[2])list.push({k:"cont",cont:{id:newId(),name:"Trolley",placeId:P[2].id}});
+    commit(list);
+  }
+  else if(f.id==="itemForm"){
+    const it=readForm();
+    if(!it.name){document.getElementById("fName").focus();return}
+    if(!it.containerId){toast("Scegli dove si trova il capo.");return}
+    const orig=S.items.find(x=>x.id===it.id),isNew=!orig,list=[];
+    const{photoData,photoRemoved,...clean}=it;
+    if(photoData){
+      const path=`photos/${it.id}-${Date.now()}.jpg`;
+      photoMem[path]=photoData;await idb.set(path,photoData).catch(()=>{});
+      list.push({k:"file",path,label:it.name});
+      if(orig&&orig.photo)list.push({k:"delFile",path:orig.photo,label:it.name});
+      clean.photo=path;
+    }else if(photoRemoved&&orig&&orig.photo){list.push({k:"delFile",path:orig.photo,label:it.name});clean.photo=""}
+    clean.updatedAt=Date.now();
+    list.push({k:"item",item:clean,isNew});
+    ls.set(K.last,it.containerId);closeSheet();commit(list);
+    toast(isNew?"Aggiunto: "+it.name:"Salvato");
+  }
+  else if(f.dataset.addcont){const inp=f.querySelector("input");const v=inp.value.trim();if(!v)return;commit([{k:"cont",cont:{id:newId(),name:v,placeId:f.dataset.addcont}}]);renderSheet()}
+  else if(f.id==="addPlace"){const v=document.getElementById("newPlace").value.trim();if(!v)return;const used=new Set(S.W.places.map(p=>p.color));const color=["p1","p2","p3","p4"].find(c=>!used.has(c))||"p4";commit([{k:"place",place:{id:newId(),name:v,color}}]);renderSheet()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&S.sheet)closeSheet()});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&cfg)scheduleSync(0)});
+window.addEventListener("online",()=>{if(cfg)scheduleSync(0)});
+
+/* ============ avvio ============ */
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+recompute();
+if(cfg)scheduleSync(0);
+</script>
+</body>
+</html>

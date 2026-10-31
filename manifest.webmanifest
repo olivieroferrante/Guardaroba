@@ -1,0 +1,16 @@
+{
+  "name": "Guardaroba",
+  "short_name": "Guardaroba",
+  "description": "Inventario dei vestiti diviso per casa, armadio e cassetto.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EEF1F5",
+  "theme_color": "#2D4F8A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
